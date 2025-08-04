@@ -1,0 +1,130 @@
+<!DOCTYPE html><html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Jarvis AI - Web</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #101010;
+      color: #fff;
+      text-align: center;
+      padding: 40px;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      margin: 10px;
+      border: none;
+      background: #00adb5;
+      color: white;
+      border-radius: 5px;
+    }
+    #output {
+      margin-top: 20px;
+      font-size: 18px;
+      color: #00ff91;
+    }
+    #image-preview {
+      margin: 10px auto;
+      max-width: 300px;
+      border: 1px solid #555;
+    }
+  </style>
+</head>
+<body>
+  <h1>🤖 Jarvis AI Assistant (Web Edition)</h1><button onclick="startListening()">🎙️ Start Listening</button> <button onclick="speakText('Jarvis is Online!')">🔊 Speak</button> <button onclick="getTime()">🕒 Time</button>
+
+<br><br> <input type="file" accept="image/*" onchange="readImage(this)" /> <br> <img id="image-preview" src="" alt="Preview" hidden> <button onclick="extractTextFromImage()">📷 OCR</button>
+
+<br><br>
+
+  <textarea id="translateInput" placeholder="Enter text to translate" rows="3" cols="50"></textarea><br><button onclick="translateText()">🌐 Translate to English</button>
+
+  <p id="output">Say something like "Hello Jarvis"</p>  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@2/dist/tesseract.min.js"></script>  <script>
+    const output = document.getElementById("output");
+    const preview = document.getElementById("image-preview");
+    let selectedImage = null;
+
+    function speakText(text) {
+      const synth = window.speechSynthesis;
+      const utterance = new SpeechSynthesisUtterance(text);
+      synth.speak(utterance);
+    }
+
+    function startListening() {
+      const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+      recognition.lang = 'en-US';
+      recognition.start();
+
+      recognition.onresult = (event) => {
+        const speech = event.results[0][0].transcript;
+        output.textContent = "You said: " + speech;
+
+        if (speech.toLowerCase().includes("hello")) {
+          speakText("Hello! How can I help you?");
+        } else if (speech.toLowerCase().includes("time")) {
+          getTime();
+        } else if (speech.toLowerCase().includes("your name")) {
+          speakText("My name is Jarvis, your personal assistant.");
+        } else {
+          speakText("Sorry, I didn’t understand that.");
+        }
+      };
+
+      recognition.onerror = (e) => {
+        output.textContent = "Error: " + e.error;
+      };
+    }
+
+    function getTime() {
+      const time = new Date().toLocaleTimeString();
+      speakText("Current time is " + time);
+      output.textContent = "Current time: " + time;
+    }
+
+    function readImage(input) {
+      const file = input.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          preview.src = e.target.result;
+          preview.hidden = false;
+          selectedImage = e.target.result;
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+
+    function extractTextFromImage() {
+      if (!selectedImage) {
+        alert("Please select an image first.");
+        return;
+      }
+      output.textContent = "Reading image...";
+      Tesseract.recognize(selectedImage, 'eng')
+        .then(({ data: { text } }) => {
+          output.textContent = "Extracted Text: " + text;
+          speakText("Text extracted successfully.");
+        });
+    }
+
+    async function translateText() {
+      const text = document.getElementById("translateInput").value;
+      if (!text.trim()) {
+        alert("Please enter text to translate.");
+        return;
+      }
+      output.textContent = "Translating...";
+
+      const res = await fetch("https://libretranslate.com/translate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ q: text, source: "hi", target: "en", format: "text" })
+      });
+      const result = await res.json();
+      output.textContent = "Translation: " + result.translatedText;
+      speakText(result.translatedText);
+    }
+  </script></body>
+  </html>
